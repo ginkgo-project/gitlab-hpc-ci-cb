@@ -29,13 +29,13 @@ function die() {
         msg="${jobid}: ${msg}"
     fi
     test -n "${msg}" && echo -e "${msg}" > /dev/stderr
-    test -n "${jobid}" && scancel -quiet ${jobid}
+    test -n "${jobid}" && scancel -quiet "${jobid}"
     test -n "${joblog}" && slurm_print_output "${jobid}" "Log" "${joblog}" /dev/stderr
     test -n "${joberr}" && slurm_print_output "${jobid}" "Errors" "${joblog}" /dev/stderr
-    test -n "${workdir}" && test -d "${workdir}" && rm -rf ${workdir}
+    test -n "${workdir}" && test -d "${workdir}" && rm -rf "${workdir}"
     # Inform cleanup.sh that we encountered an error
     touch "${CUSTOM_ENV_CI_WS}/${CUSTOM_ENV_CI_JOB_ID}"
-    exit ${BUILD_FAILURE_EXIT_CODE}
+    exit "${BUILD_FAILURE_EXIT_CODE}"
 }
 
 
@@ -48,12 +48,14 @@ function slurm_print_output() {
     local slurmlogfile="${3}"
     local output=${4}
 
-    if [[ ! -f "${slurmlogfile}" || "$(cat $slurmlogfile)" == "" ]]; then
+    if [[ ! -f "${slurmlogfile}" || "$(cat "${slurmlogfile}")" == "" ]]; then
         return 0
     fi
-    echo -e "== SLURM Job ${jobid} ${logtype}" > $output
-    echo -e "============================" > $output
-    cat "${slurmlogfile}" > $output
+    {
+        echo -e "== SLURM Job ${jobid} ${logtype}"
+        echo -e "============================"
+        cat "${slurmlogfile}"
+    } >> "${output}"
 }
 
 
@@ -76,11 +78,11 @@ function slurm_time_to_seconds() {
     # naturally. We need different cases for optional components at the
     # beginning of the expression.
     if [[ ${num_dashes} == 1 ]]; then # Suppose d-hh(:min(:s)) where parenthesis show optional components
-        running_limit=$(echo ${slurm_time} | awk -F[-:] '{ print ($1 * 86400) + ($2 * 3600) + ($3 * 60) + $4 }')
+        running_limit=$(echo "${slurm_time}" | awk -F[-:] '{ print ($1 * 86400) + ($2 * 3600) + ($3 * 60) + $4 }')
     elif [[ ${num_colons} == 2 ]]; then # Suppose hh:min:s
-        running_limit=$(echo ${slurm_time} | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 }')
+        running_limit=$(echo "${slurm_time}" | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 }')
     elif [[ ${num_colons} == 1 || ${num_colons} == 0 ]]; then # Suppose min(:s)
-        running_limit=$(echo ${slurm_time} | awk -F: '{ print ($1 * 60) + $2 }')
+        running_limit=$(echo "${slurm_time}" | awk -F: '{ print ($1 * 60) + $2 }')
     else
         return 1
     fi
@@ -122,10 +124,11 @@ function slurm_wait_for_status() {
     # Internal variables
     local keep_waiting=1
     local waiting_time=0
+    local jobstatus=""
 
     echo -e ""
     while [[ $keep_waiting == 1 ]]; do
-        local jobstatus="$(sacct -bn -j ${jobid} | head -1 | tr -s ' ' | cut -d' ' -f 2)"
+        jobstatus="$(sacct -bn -j "${jobid}" | head -1 | tr -s ' ' | cut -d' ' -f 2)"
         if [[ $waiting_time -gt $waiting_limit ]]; then
             echo -e "\nJob ${jobid} has exceeded the waiting limit\
                 of ${waiting_limit}." > /dev/stderr
@@ -133,6 +136,7 @@ function slurm_wait_for_status() {
         fi
         # We need extglob for the expression variable based cases to work
         shopt -s extglob
+        # shellcheck disable=SC2254
         case ${jobstatus} in
             ${good_status_expr})
                 keep_waiting=0
@@ -143,7 +147,7 @@ function slurm_wait_for_status() {
                 ;;
             *)
                 echo -n "."
-                sleep $SLURM_UPDATE_INTERVAL
+                sleep "$SLURM_UPDATE_INTERVAL"
                 waiting_time=$((waiting_time + SLURM_UPDATE_INTERVAL))
                 ;;
         esac

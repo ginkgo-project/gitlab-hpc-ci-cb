@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 
 # Include the slurm utility functions
+# shellcheck source=./slurm_utils.sh
 source "${BASH_SOURCE[0]%/*}/slurm_utils.sh"
 
 # Do NOT touch these and make sure they are the same as local environment
@@ -103,7 +104,7 @@ export SLURM_BAD_STATUS
 function ensure_executable_available() {
     local command=${1}
 
-    if ! type -p ${1} >/dev/null 2>/dev/null; then
-        die "No ${1} executable found"
+    if ! type -p "${command}" >/dev/null 2>/dev/null; then
+        die "No ${command} executable found"
     fi
 }

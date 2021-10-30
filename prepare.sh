@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 # https://docs.gitlab.com/runner/executors/custom.html#prepare
 
+# shellcheck source=./include.sh
 source "${BASH_SOURCE[0]%/*}/include.sh"
 
 
@@ -24,6 +25,7 @@ fi
 
 
 # Reuse a container if it exists
+# shellcheck disable=SC2143
 if ! [[ $(enroot list | grep "${CONTAINER_NAME}") ]]; then
     echo -e "Preparing the container ${CONTAINER_NAME}."
 
@@ -42,21 +44,21 @@ if ! [[ $(enroot list | grep "${CONTAINER_NAME}") ]]; then
     IMAGE_LOCK_FILE=${IMAGE_DIR}/LOCK_${IMAGE_NAME}
 
     # Update the image once every 3 hours. Use a lock to prevent conflicts
-    exec 100<>${IMAGE_LOCK_FILE}
+    exec 100<>"${IMAGE_LOCK_FILE}"
     flock -w 120 100
     if [[ ! -f ${IMAGE_TIMESTAMP_FILE} ||
-              ($(cat ${IMAGE_TIMESTAMP_FILE}) -le $(date +%s -d '-3 hours')) ]]; then
-        IMAGE_FILE=${IMAGE_DIR}/${IMAGE_NAME}.sqsh
+              ($(cat "${IMAGE_TIMESTAMP_FILE}") -le $(date +%s -d '-3 hours')) ]]; then
+        IMAGE_FILE="${IMAGE_DIR}/${IMAGE_NAME}.sqsh"
         if [[ -f ${IMAGE_FILE} ]]; then
-            rm ${IMAGE_DIR}/${IMAGE_NAME}.sqsh
+            rm "${IMAGE_DIR}/${IMAGE_NAME}.sqsh"
         fi
 
         COMMAND=(enroot import \
             --output "${IMAGE_DIR}/${IMAGE_NAME}.sqsh" \
             -- "${URL}")
 
-        "${COMMAND[@]}" || die "Command: ${COMMAND[@]} failed with exit code ${?}"
-        echo $(date +%s) > ${IMAGE_TIMESTAMP_FILE}
+        "${COMMAND[@]}" || die "Command: ${COMMAND[*]} failed with exit code ${?}"
+        date +%s > "${IMAGE_TIMESTAMP_FILE}"
     fi
     flock -u 100
 
@@ -66,7 +68,7 @@ if ! [[ $(enroot list | grep "${CONTAINER_NAME}") ]]; then
             --name "${CONTAINER_NAME}" \
             -- "${IMAGE_DIR}/${IMAGE_NAME}.sqsh"
     )
-    "${COMMAND[@]}" || die "Command: ${COMMAND[@]} failed with exit code ${?}"
+    "${COMMAND[@]}" || die "Command: ${COMMAND[*]} failed with exit code ${?}"
 else
     echo -e "Reusing container ${CONTAINER_NAME}"
 fi

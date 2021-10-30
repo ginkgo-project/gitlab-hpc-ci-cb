@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 # https://docs.gitlab.com/runner/executors/custom.html#config
 
+# shellcheck source=./include.sh
 source "${BASH_SOURCE[0]%/*}/include.sh"
 
 # Sometimes you might want to set some settings during execution time.
