@@ -23,7 +23,7 @@ if [[ -z "${USE_SLURM}" ]]; then
     #
     # shellcheck disable=SC2206
     COMMAND=(enroot start ${ENROOT_MOUNT_OPTIONS[*]} --rw ${ENROOT_ENV_CONFIG[*]} -e "NVIDIA_VISIBLE_DEVICES=void" ${CONTAINER_NAME} /bin/bash)
-    "${COMMAND[@]}" < "${1}" || die "Command: ${COMMAND[*]} failed with exit code ${?}"
+    "${COMMAND[@]}" < "${STEP_SCRIPT_ARG}" || die "Command: ${COMMAND[*]} failed with exit code ${?}"
 else # SLURM usage requested
     ensure_executable_available sacct
     ensure_executable_available scancel
@@ -36,21 +36,21 @@ else # SLURM usage requested
     # We need to create the temporary files in a directory with filesystem
     # access on all nodes. Because we consider ${CONTAINER_NAME} to be unique,
     # we use it as storage for this job.
-    WORKDIR="${CI_WS}/${CONTAINER_NAME}"
-    STEPSCRIPTDIR="${WORKDIR}/step_scripts"
-    if [[ ! -d "${WORKDIR}" ]]; then
-        mkdir -p "${WORKDIR}"
+    WORK_DIR="${CI_WS}/${CONTAINER_NAME}"
+    STEP_SCRIPT_DIR="${WORK_DIR}/step_scripts"
+    if [[ ! -d "${WORK_DIR}" ]]; then
+        mkdir -p "${WORK_DIR}"
     fi
-    if [[ ! -d "${STEPSCRIPTDIR}" ]]; then
-        mkdir -p "${STEPSCRIPTDIR}"
+    if [[ ! -d "${STEP_SCRIPT_DIR}" ]]; then
+        mkdir -p "${STEP_SCRIPT_DIR}"
     fi
-    NUMSCRIPTS="$(find "${STEPSCRIPTDIR}" -maxdepth 1 -type f | wc -l)"
-    STEPSCRIPT="${STEPSCRIPTDIR}/${NUMSCRIPTS}"
-    touch "${STEPSCRIPT}"
-    JOBSCRIPT=$(mktemp -p "${WORKDIR}")
+    NUM_SCRIPTS="$(find "${STEP_SCRIPT_DIR}" -maxdepth 1 -type f | wc -l)"
+    STEP_SCRIPT="${STEP_SCRIPT_DIR}/${NUM_SCRIPTS}"
+    touch "${STEP_SCRIPT}"
+    JOB_SCRIPT=$(mktemp -p "${WORK_DIR}")
 
     # Save the step script
-    cp "${STEP_SCRIPT_ARG}" "${STEPSCRIPT}"
+    cp "${STEP_SCRIPT_ARG}" "${STEP_SCRIPT}"
 
     # Only store the gitlab scripts until we reach the last cleanup one
     if [[ "${STEP_NAME_ARG}" != "cleanup_file_variables" ]]; then
@@ -59,12 +59,12 @@ else # SLURM usage requested
     fi
 
     # This is the last step cleanup_file_variables, prepare the SLURM job
-    JOBLOG=$(mktemp -p "${WORKDIR}")
-    JOBERR=$(mktemp -p "${WORKDIR}")
+    JOB_LOG=$(mktemp -p "${WORK_DIR}")
+    JOB_ERR=$(mktemp -p "${WORK_DIR}")
     SLURM_CONFIG=("--job-name=${CONTAINER_NAME}")
-    SLURM_CONFIG+=("--error=${JOBERR}")
-    SLURM_CONFIG+=("--output=${JOBLOG}")
-    SLURM_CONFIG+=("--chdir=${WORKDIR}")
+    SLURM_CONFIG+=("--error=${JOB_ERR}")
+    SLURM_CONFIG+=("--output=${JOB_LOG}")
+    SLURM_CONFIG+=("--chdir=${WORK_DIR}")
     if [[ -n "${CUSTOM_ENV_SLURM_PARTITION}" ]]; then
         SLURM_CONFIG+=("--partition=${CUSTOM_ENV_SLURM_PARTITION}")
     fi
@@ -76,6 +76,9 @@ else # SLURM usage requested
     fi
     if [[ -n "${CUSTOM_ENV_SLURM_GRES}" ]]; then
         SLURM_CONFIG+=("--gres=${CUSTOM_ENV_SLURM_GRES}")
+    fi
+    if [[ -n "${CUSTOM_ENV_SLURM_ACCOUNT}" ]]; then
+        SLURM_CONFIG+=("--account=${CUSTOM_ENV_SLURM_ACCOUNT}")
     fi
 
     # Log the configuration
@@ -91,45 +94,45 @@ else # SLURM usage requested
     # Somehow, this script doesn't like if the variables are surrounded by "
     echo -e "#!/bin/bash
 
-for scriptnum in \$(ls -1v ${STEPSCRIPTDIR}); do
+for scriptnum in \$(ls -1v ${STEP_SCRIPT_DIR}); do
     srun enroot start ${MOUNT_OPTIONS[*]} --rw ${ENROOT_ENV_CONFIG[*]} \
-        ${CONTAINER_NAME} /bin/bash < ${STEPSCRIPTDIR}/\${scriptnum}
+        ${CONTAINER_NAME} /bin/bash < ${STEP_SCRIPT_DIR}/\${scriptnum}
 done
-" > "${JOBSCRIPT}"
-    chmod +x "${JOBSCRIPT}"
+" > "${JOB_SCRIPT}"
+    chmod +x "${JOB_SCRIPT}"
 
 
     # Submission
     # shellcheck disable=SC2206
-    COMMAND=(sbatch --parsable ${SLURM_CONFIG[*]} ${JOBSCRIPT})
-    JOBID=$("${COMMAND[@]}" || \
-        die "Command: ${COMMAND[*]} failed with exit code ${EXIT_CODE}" "${WORKDIR}")
-    echo -e "Job submitted and pending with ID: ${JOBID}."
+    COMMAND=(sbatch --parsable ${SLURM_CONFIG[*]} ${JOB_SCRIPT})
+    JOB_ID=$("${COMMAND[@]}" || \
+        die "Command: ${COMMAND[*]} failed with exit code ${EXIT_CODE}" "${WORK_DIR}")
+    echo -e "Job submitted and pending with ID: ${JOB_ID}."
     squeue -u "${USER}"
 
-    # Store the JOBID so `cleanup.sh` can read it and cancel the job if running
+    # Store the JOB_ID so `cleanup.sh` can read it and cancel the job if running
     # (e.g., when pressing the cancel button on gitlab). We consider that the
     # CONTAINER_NAME is unique at a given time, so we don't use locking or a list
     # of ids.
-    echo "${JOBID}" > "${SLURM_IDS_PATH}/${CONTAINER_NAME}.txt"
+    echo "${JOB_ID}" > "${SLURM_IDS_PATH}/${CONTAINER_NAME}.txt"
 
-    slurm_wait_for_status "${JOBID}" "${SLURM_PENDING_LIMIT}" \
+    slurm_wait_for_status "${JOB_ID}" "${SLURM_PENDING_LIMIT}" \
         "${SLURM_GOOD_PENDING_STATUS}" || die "encountered an error while waiting" \
-        "${WORKDIR}" "${JOBID}" "${JOBLOG}" "${JOBERR}"
+        "${WORK_DIR}" "${JOB_ID}" "${JOB_LOG}" "${JOB_ERR}"
 
-    echo -e "Job ${JOBID} started execution."
-    slurm_wait_for_status "${JOBID}" "${SLURM_RUNNING_LIMIT}" \
+    echo -e "Job ${JOB_ID} started execution."
+    slurm_wait_for_status "${JOB_ID}" "${SLURM_RUNNING_LIMIT}" \
         "${SLURM_GOOD_COMPLETED_STATUS}" || die "encountered an error while waiting" \
-        "${WORKDIR}" "${JOBID}" "${JOBLOG}" "${JOBERR}"
+        "${WORK_DIR}" "${JOB_ID}" "${JOB_LOG}" "${JOB_ERR}"
 
-    echo -e "Job ${JOBID} completed."
-    slurm_print_output "${JOBID}" "Log" "${JOBLOG}" /dev/stdout
-    slurm_print_output "${JOBID}" "Errors" "${JOBERR}" /dev/stdout
+    echo -e "Job ${JOB_ID} completed."
+    slurm_print_output "${JOB_ID}" "Log" "${JOB_LOG}" /dev/stdout
+    slurm_print_output "${JOB_ID}" "Errors" "${JOB_ERR}" /dev/stdout
 
-    if [[ -f "${JOBERR}" && "$(cat "${JOBERR}")"  != "" ]]; then
-        die "encountered an error during execution" "${WORKDIR}" "${JOBID}"
+    if [[ -f "${JOB_ERR}" && "$(cat "${JOB_ERR}")"  != "" ]]; then
+        die "encountered an error during execution" "${WORK_DIR}" "${JOB_ID}"
     fi
 
     # Cleanup the workdir
-    rm -rf "${WORKDIR}"
+    rm -rf "${WORK_DIR}"
 fi

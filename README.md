@@ -1,39 +1,56 @@
-# GitLab runner on HPC systems with ENROOT and SLURM
+<details>
+---
+header-includes: |
+    \usepackage{fancyhdr}
+    \pagestyle{fancy}
+    \hypersetup{colorlinks=true,
+    linkcolor=blue,
+    allbordercolors={0 0 0},
+    pdfborderstyle={/S/U/W 1}}
+---
+</details>
 
-1. [Overview](#Overview)
-   1. [Purpose and Features](#Purpose-and-Features)
-   2. [Dependencies](#Dependencies)
-   3. [Code Structure](#Code-Structure)
-   4. [Configuration Variables](#Configuration-Variables)
-      1. [Global Options](#Global-Options)
-      2. [SLURM Behavior](#SLURM-Behavior)
-2. [Installation](#Installation)
-   1. [Enroot and Cluster Setup](#Enroot-And-Cluster-Setup)
+# GitLab runner for HPC systems
+
+In rootless mode, by relying on ENROOT and SLURM.
+
+1. [Overview](#overview)
+   1. [Purpose and Features](#purpose-and-features)
+   2. [Dependencies](#dependencies)
+   3. [Code Structure](#code-structure)
+   4. [Configuration Variables](#configuration-variables)
+      1. [Global Options](#global-options)
+      2. [SLURM Behavior](#slurm-behavior)
+2. [Installation](#installation)
+   1. [Enroot and Cluster Setup](#enroot-and-cluster-setup)
    2. [Installing a gitlab-runner](#installing-a-gitlab-runner)
-3. [Usage Example](#Usage-Example)
-4. [License](#License)
-5. [Links](#Links)
+   2. [Ccache setup](#ccache-setup)
+3. [Usage Example](#usage-example)
+4. [License](#license)
+5. [Links](#links)
 
 ## Overview
 
 ### Purpose and Features
 
-This set of scripts aims at enabling user-level Continuous Integration on HPC clusters by relying on Gitlab runner's [custom executors][gitlab-custom-executors], [ENROOT][enroot-nvidia] as a container solution replacement for docker and the SLURM job scheduler when using computing nodes. It also optionally supports [Ccache][ccache-website] to speed up compilation times on CI jobs. This tool was inspired by the [NHR@KIT Cx Project][nhr-kit-cx] which provides ENROOT and GitLab-runner on their clusters. It is used in production in some of the [Ginkgo Software][ginkgo-software]'s [pipelines][ginkgo-pipelines].
+This set of scripts aims at enabling user-level (no root access required) Continuous Integration on HPC clusters by relying on Gitlab runner's [custom executors][gitlab-custom-executors], [ENROOT][enroot-nvidia] as a rootless container solution replacement for docker and the SLURM job scheduler when using computing nodes. It also optionally supports [Ccache][ccache-website] to speed up compilation times on CI jobs. This tool was inspired by the [NHR@KIT Cx Project][nhr-kit-cx] which provides ENROOT and GitLab-runner on their clusters. It is used in production in some of the [Ginkgo Software][ginkgo-software]'s [pipelines][ginkgo-pipelines].
 
 SLURM usage is optional in this set of scripts as it is considered that many of the simple CI steps, such as compilation, will happen on a login node to optimize computing time and resource sharing. Currently, the script uses non-interactive job submission and waiting loops to ensure the correct completion of the job on the cluster.
 
 A typical use case for this series of scripts is the following:
+
 + build: configure, build, install all the software on the login node.
 + test: reuse the previous container to launch tests on a compute node with device access through SLURM.
 + benchmark: also reuse the previous container to launch a benchmarking job on a compute node with device access through SLURM, then delete the container.
 
-See the [usage example](#Usage-Example) for concrete details.
+See the [usage example](#usage-example) for concrete details.
 
 ### Dependencies
 
 There are several standard Linux commands used on top of ENROOT and SLURM commands. For some commands, the script can rely on non-standard/GNU-only options. This is for now not optimized.
 
 Always required:
+
 + Gitlab runner (user mode)
 + Enroot
 + Flock
@@ -41,6 +58,7 @@ Always required:
 + grep
 
 With SLURM:
+
 + sacct, squeue, scancel, sbatch, srun
 + GNU ls, wc, head, tr, cut, awk, ...
 + option extglob
@@ -48,12 +66,14 @@ With SLURM:
 ### Code Structure
 
 The code structure is simple, there are the standard GitLab-runner custom executor scripts:
+
 + `config.sh`: describes the executor;
 + `prepare.sh`: prepares the enroot container from a docker image, uses an image cache, optionally reuses existing container instead;
 + `run.sh`: either directly runs the GitLab commands on a local enroot container, or submits a job that executes everything in bulk;
 + `cleanup.sh`: delete the container if not requested otherwise, cleanup the SLURM job if needed.
 
 The main configuration variables and functions are defined in the following files:
+
 + `include.sh`: contains the main (non slurm) configuration options;
 + `slurm_utils.sh`: contains most functions and configurations taking for SLURM functionality.
 
@@ -69,6 +89,7 @@ These variables are not SLURM specific and can be used in the default `ENROOT` o
 + `CI_WS`: a directory with shared data access across all nodes to be used as a workspace.
 
 Optional:
+
 + `USE_NAME`: instead of an automatically generated name, use a specific name for the container (and SLURM job if applicable). This name needs to be unique! When not specified, the name will be `GitLabRunnerEnrootExecutorBuildID${CUSTOM_ENV_CI_BUILD_ID}`.
 + `NVIDIA_VISIBLE_DEVICES`: a value passed to the enroot container to control NVIDIA device visibility. When no GPU is available or used, `void` should be passed.
 + `CCACHE_DIR`: sets where the Ccache directory is mounted to in the enroot container when used.
@@ -81,20 +102,23 @@ When any of these variables are set, instead of directly running the container o
 
 + `SLURM_PARTITION`: the value of the SLURM `--partition` parameter, e.g., `gpu`.
 + `SLURM_EXCLUSIVE`: when non-zero, adds the SLURM `--exclusive` parameter.
-+ `SLURM_TIME`: the value of the SLURM `--time` parameter, e.g. `00:30:00`.
++ `SLURM_TIME`: the value of the SLURM `--time` parameter, e.g. `0:30:00`.
 + `SLURM_GRES`: the value of the SLURM `--gres` parameter.
++ `SLURM_ACCOUNT`: the value of the SLURM `--account` parameter.
 + `USE_SLURM`: if no other variables are set, setting this enables SLURM mode of execution for this job.
 
 These variables control the SLURM job waiting loop behavior:
+
 + `SLURM_UPDATE_INTERVAL`: the sleeping time between two job status checks.
-+ `SLURM_PENDING_LIMIT`: the job pending time limit, the default is 12 hours.
++ `SLURM_PENDING_LIMIT`: the job pending time waiting limit, the default is 12 hours.
++ `SLURM_TIME`: when specified, this changes the running time waiting limit to that value, the default is 24 hours.
 
 ## Installation
-The instructions are for a standard Linux system that already supports user mode GitLab and has enroot installed (see [dependencies](#Dependencies)). Also, refer to the [NHR@KIT CI user documentation][nhr-kit-cx] which detail this setup on their systems.
+The instructions are for a standard Linux system that already supports user mode GitLab and has enroot installed (see [dependencies](#dependencies)). Also, refer to the [NHR@KIT CI user documentation][nhr-kit-cx] which detail this setup on their systems.
 
 ### Installing a gitlab-runner
 
-The standard `gitlab-runner install` command can be used. Make sure to select the custom executor, see [gitlab runner install documentation][gitlab-runner-install]. Here is an example of what a runner configuration can look like:
+The standard `gitlab-runner install` command can be used. Make sure to select the custom executor, see [gitlab runner registration documentation][gitlab-runner-install]. Here is an example of what a runner configuration can look like, usually found in `~/.gitlab/config.toml`:
 
 ``` yaml
 [[runners]]
@@ -104,7 +128,8 @@ The standard `gitlab-runner install` command can be used. Make sure to select th
   executor = "custom"
   builds_dir = "/workspace/scratch/my-ci-project/gitlab-runner/builds/"
   cache_dir = "/workspack/scratch/my-ci-project/gitlab-runner/cache/"
-  environment = ["CI_WS=/workspace/scratch/my-ci-project/", "CCACHE_DIR=/ccache", "CCACHE_MAXSIZE=40G"]
+  environment = ["CI_WS=/workspace/scratch/my-ci-project",
+                 "CCACHE_DIR=/ccache", "CCACHE_MAXSIZE=40G"]
   [runners.custom_build_dir]
     enabled = false
   [runners.custom]
@@ -117,19 +142,29 @@ The standard `gitlab-runner install` command can be used. Make sure to select th
 ### Enroot and Cluster Setup
 On machines using `systemd` and `logind`, enable lingering for your user so that the gitlab-runner daemon can persist when logged off: `sysctl enable-linger ${USER}`. To check if the property is active, use the command: `loginctl show-user $USER --property=Linger`, which should output `Linger=yes`.
 
-As detailed in [global options](#Global-Options), it is required to set the environment variable `CI_WS` either in the runner configuration or in the script to be used as a workspace for storing enroot containers, caching, and more.
+As detailed in [global options](#global-options), it is required to set the environment variable `CI_WS` either in the runner configuration or in the script to be used as a workspace for storing enroot containers, caching, and more.
+
+After the new GitLab runner has been configured, lingering is enabled and the other cluster setup steps are finished, start your runner in user mode with the following commands on a `systemd`-based system:
+
+``` sh
+# Enable your own gitlab-runner and start it up
+systemctl --user enable --now gitlab-runner
+# Check that the gitlab runner is running
+systemctl --user status gitlab-runner
+```
 
 ### Ccache setup
 To enable Ccache, it is sufficient to set the variable `CCACHE_DIR` to the value of where Ccache will be stored inside the container (e.g., `/ccache`). The actual storage directory for Ccache on the cluster will be in `${CI_WS}/ccache`.
 
 ## Usage Example
 
-Assuming that the code of `default_build` contains the code for compiling your software in the required setting, and `default_test` contains the equivalent of `make test`, the following gitlab-ci yaml configuration will:
+Assuming that the code of `default_build` contains the code for compiling your software in the required setting, and `default_test` contains the equivalent of `make test`, the following gitlab-ci YAML configuration will:
+
 + `my_build_job`: build the software on the node running gitlab-runner (no SLURM), keep the container's state for the next job
 + `my_test_job`: test the software on a compute node on the `gpu` SLURM partition with one GPU and a time limit of 30 minutes. Then delete the container (no `KEEP_CONTAINER` is set).
   
   
-Note that this works because both use the same custom name `simple_hpc_ci_job`, which needs to be unique at any given time.
+Note that this works because both use the same custom name `simple_hpc_ci_job`, which needs to be unique, but shared among the jobs of the same pipeline.
 
 
 ``` yaml
@@ -172,6 +207,7 @@ Licensed under the [BSD 3-Clause license].
 * [Gitlab runner custom executor examples](https://docs.gitlab.com/runner/executors/custom_examples/)
 
 [gitlab-custom-executors]: https://docs.gitlab.com/runner/executors/custom.html
+[gitlab-runner-install]: https://docs.gitlab.com/runner/register/index.html
 [enroot-nvidia]: https://github.com/NVIDIA/enroot
 [ccache-website]: https://ccache.dev/
 [nhr-kit-cx]: https://www.nhr.kit.edu/userdocs/ci/

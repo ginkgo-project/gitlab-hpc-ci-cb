@@ -81,6 +81,7 @@ SUPPORTED_SLURM_VARIABLES=(SLURM_PARTITION
                            SLURM_EXCLUSIVE
                            SLURM_TIME
                            SLURM_GRES
+                           SLURM_ACCOUNT
                            SLURM_UPDATE_INTERVAL
                            SLURM_PENDING_LIMIT
                            SLURM_RUNNING_LIMIT

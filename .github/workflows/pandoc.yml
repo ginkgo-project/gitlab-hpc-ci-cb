@@ -1,0 +1,27 @@
+name: Create README.pdf
+
+on: push
+
+jobs:
+  publish_readme_pdf:
+    name: README as pdf
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Convert
+        uses: docker://pandoc/latex:2.14.2
+        with:
+          args: >-
+            --output=README.pdf
+            README.md
+      - name: Push the README
+        env:
+          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          git config user.name 'ginkgo-bot'
+          git config user.email 'ginkgo.library@gmail.com'
+          git add README.pdf
+          git commit -m "[bot] Update README.pdf"
+          git pull --rebase
+          git push
