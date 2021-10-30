@@ -6,24 +6,24 @@ source "${BASH_SOURCE[0]%/*}/slurm_utils.sh"
 # Do NOT touch these and make sure they are the same as local environment
 # variables!! Otherwise, there can be *duplicate* locations and local containers
 # will not see the same as gitlab containers!
-export CI_WS=${CUSTOM_ENV_CI_WS}
+export CI_WS="${CUSTOM_ENV_CI_WS}"
 export LOGFILE="${CI_WS}/gitlab-runner-enroot.log"
-export ENROOT_CACHE_PATH=${CI_WS}/ENROOT_CACHE
-export ENROOT_DATA_PATH=${CI_WS}/ENROOT_DATA
-export SLURM_IDS_PATH=${CI_WS}/SLURM_IDS
+export ENROOT_CACHE_PATH="${CI_WS}/ENROOT_CACHE"
+export ENROOT_DATA_PATH="${CI_WS}/ENROOT_DATA"
+export SLURM_IDS_PATH="${CI_WS}/SLURM_IDS"
 
 
 # Set a variable CONTAINER_NAME based on the environment variable
 # CUSTOM_ENV_USE_NAME
 if [[ -z "${CUSTOM_ENV_USE_NAME}" ]]; then
-    CONTAINER_NAME="GitLabRunnerCustomExecutorEnrootBuildID${CUSTOM_ENV_CI_BUILD_ID}"
+    CONTAINER_NAME="GitLabRunnerEnrootExecutorBuildID${CUSTOM_ENV_CI_BUILD_ID}"
 else
     CONTAINER_NAME="${CUSTOM_ENV_USE_NAME}"
 fi
 export CONTAINER_NAME
 
 
-# CCACHE and volume management
+# Ccache and volume management
 export CCACHE_DIR_SRC="${CI_WS}/ccache"
 ENROOT_MOUNT_OPTIONS=()
 if [[ -n "${CUSTOM_ENV_CCACHE_DIR}" ]]; then
@@ -107,24 +107,3 @@ function ensure_executable_available() {
         die "No ${1} executable found"
     fi
 }
-
-
-function logging() {
-    echo "==="
-    echo "= ${BASH_SOURCE[-1]}"
-    echo "==="
-    echo "Command line arguments: $@"
-    #if [[ $# -gt 0 ]]; then
-        # This is evil, delete the data afterwards
-        #echo "Script:"
-        #local SCRIPT="$1"
-        #if [[ -e "${SCRIPT}" ]]; then
-        #    cat "${SCRIPT}"
-        #fi
-    #fi
-    echo "Environment:"
-    env
-}
-
-# To enable logging, uncomment this
-# logging "$@" >> "${LOGFILE}"

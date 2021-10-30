@@ -1,7 +1,5 @@
 name: "Shellcheck"
-on:
-  pull_request:
-  push:
+on: [push, pull_request]
 
 jobs:
   check_script_files:

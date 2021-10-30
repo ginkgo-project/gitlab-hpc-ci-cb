@@ -69,7 +69,7 @@ These variables are not SLURM specific and can be used in the default `ENROOT` o
 + `CI_WS`: a directory with shared data access across all nodes to be used as a workspace.
 
 Optional:
-+ `USE_NAME`: instead of an automatically generated name, use a specific name for the container (and SLURM job if applicable). This name needs to be unique!
++ `USE_NAME`: instead of an automatically generated name, use a specific name for the container (and SLURM job if applicable). This name needs to be unique! When not specified, the name will be `GitLabRunnerEnrootExecutorBuildID${CUSTOM_ENV_CI_BUILD_ID}`.
 + `NVIDIA_VISIBLE_DEVICES`: a value passed to the enroot container to control NVIDIA device visibility. When no GPU is available or used, `void` should be passed.
 + `CCACHE_DIR`: sets where the Ccache directory is mounted to in the enroot container when used.
 + `CCACHE_MAXSIZE`: sets a custom maximum limit to the Ccache directory size.
@@ -115,11 +115,11 @@ The standard `gitlab-runner install` command can be used. Make sure to select th
 ```
 
 ### Enroot and Cluster Setup
-Enable lingering for your user so that the gitlab-runner daemon can persist when logged off: `sysctl enable-linger ${USER}`.
+On machines using `systemd` and `logind`, enable lingering for your user so that the gitlab-runner daemon can persist when logged off: `sysctl enable-linger ${USER}`. To check if the property is active, use the command: `loginctl show-user $USER --property=Linger`, which should output `Linger=yes`.
 
 As detailed in [global options](#Global-Options), it is required to set the environment variable `CI_WS` either in the runner configuration or in the script to be used as a workspace for storing enroot containers, caching, and more.
 
-### CCache setup
+### Ccache setup
 To enable Ccache, it is sufficient to set the variable `CCACHE_DIR` to the value of where Ccache will be stored inside the container (e.g., `/ccache`). The actual storage directory for Ccache on the cluster will be in `${CI_WS}/ccache`.
 
 ## Usage Example
@@ -169,8 +169,7 @@ Licensed under the [BSD 3-Clause license].
 ## Links
 * [NHR@KIT CI User documentation][nhr-kit-cx]
 * [Gitlab runner's custom executors][gitlab-custom-executors]
-* [Gitlab runner custom executor
-  examples](https://docs.gitlab.com/runner/executors/custom_examples/)
+* [Gitlab runner custom executor examples](https://docs.gitlab.com/runner/executors/custom_examples/)
 
 [gitlab-custom-executors]: https://docs.gitlab.com/runner/executors/custom.html
 [enroot-nvidia]: https://github.com/NVIDIA/enroot
@@ -179,4 +178,3 @@ Licensed under the [BSD 3-Clause license].
 [ginkgo-software]: https://github.com/ginkgo-project/ginkgo
 [ginkgo-pipelines]: https://gitlab.com/ginkgo-project/ginkgo-public-ci/-/pipelines
 [BSD 3-Clause license]: LICENSE
->>>>>>> Initial version of the script
