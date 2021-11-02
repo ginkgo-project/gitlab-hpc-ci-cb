@@ -1,6 +1,9 @@
 name: Create README.pdf
 
-on: push
+on:
+  push:
+    paths:
+      - 'README.md'
 
 jobs:
   publish_readme_pdf:
