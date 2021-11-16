@@ -77,21 +77,25 @@ export ENROOT_ENV_CONFIG
 #
 # If the user sets any slurm variable or the variable USE_SLURM, this container
 # will use slurm job submission
-SUPPORTED_SLURM_VARIABLES=(SLURM_PARTITION
-                           SLURM_EXCLUSIVE
-                           SLURM_TIME
-                           SLURM_GRES
-                           SLURM_ACCOUNT
-                           SLURM_UPDATE_INTERVAL
-                           SLURM_PENDING_LIMIT
-                           SLURM_RUNNING_LIMIT
-                           USE_SLURM)
-for slurm_var in ${SUPPORTED_SLURM_VARIABLES[*]}; do
-    check_var="CUSTOM_ENV_${slurm_var}"
-    if [[ -n "${!check_var}" ]]; then
-        USE_SLURM=1
-    fi
-done
+if [[ -z "${CUSTOM_ENV_USE_SLURM}" ]]; then
+    SUPPORTED_SLURM_VARIABLES=(SLURM_PARTITION
+                               SLURM_EXCLUSIVE
+                               SLURM_TIME
+                               SLURM_GRES
+                               SLURM_ACCOUNT
+                               SLURM_UPDATE_INTERVAL
+                               SLURM_PENDING_LIMIT
+                               SLURM_RUNNING_LIMIT
+                               USE_SLURM)
+    for slurm_var in ${SUPPORTED_SLURM_VARIABLES[*]}; do
+        check_var="CUSTOM_ENV_${slurm_var}"
+        if [[ -n "${!check_var}" ]]; then
+          USE_SLURM=1
+        fi
+    done
+else
+    USE_SLURM=${CUSTOM_ENV_USE_SLURM}
+fi
 export USE_SLURM
 # variables from slurm_utils we need to expose outside
 export SLURM_UPDATE_INTERVAL

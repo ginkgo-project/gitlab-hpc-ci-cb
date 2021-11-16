@@ -17,7 +17,7 @@ STEP_SCRIPT_ARG="${!before_last}"
 
 
 # No slurm requested, directly use the login node
-if [[ -z "${USE_SLURM}" ]]; then
+if [[ -z "${USE_SLURM}" || ${USE_SLURM} -eq 0 ]]; then
     # Enroot fails when quoting anything or splitting this command. Leave it in
     # this format.
     #
