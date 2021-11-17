@@ -29,7 +29,7 @@ function die() {
         msg="${jobid}: ${msg}"
     fi
     test -n "${msg}" && echo -e "${msg}" > /dev/stderr
-    test -n "${jobid}" && scancel -quiet "${jobid}"
+    test -n "${jobid}" && scancel --quiet "${jobid}"
     test -n "${joblog}" && slurm_print_output "${jobid}" "Log" "${joblog}" /dev/stderr
     test -n "${joberr}" && slurm_print_output "${jobid}" "Errors" "${joblog}" /dev/stderr
     test -n "${workdir}" && test -d "${workdir}" && rm -rf "${workdir}"

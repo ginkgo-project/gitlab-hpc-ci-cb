@@ -27,6 +27,12 @@ if [[ -f "${CI_WS}/${CUSTOM_ENV_CI_JOB_ID}" ]]; then
     rm "${CI_WS}/${CUSTOM_ENV_CI_JOB_ID}"
 fi
 
+# Somehow, the work dir is leftover, that can indicate a job cancellation.
+WORK_DIR="${CI_WS}/${CONTAINER_NAME}"
+if [[ -d "${WORK_DIR}" ]]; then
+    rm -rf "${WORK_DIR}"
+fi
+
 # Delete container root filesystems if it isn't asked to be preserved or there
 # was an error in one of the previous step.
 {
@@ -34,8 +40,7 @@ fi
     echo -e "Job: ${CUSTOM_ENV_CI_JOB_ID}"
     echo -e "Job started at: ${CUSTOM_ENV_CI_JOB_STARTED_AT}"
     echo -e "Pipeline: ${CUSTOM_ENV_CI_PIPELINE_ID}"
-    if [[ -z "${CUSTOM_ENV_KEEP_CONTAINER}" ||
-              ${CUSTOM_ENV_KEEP_CONTAINER} -eq 0 || ${JOB_FAILED} != 0 ]]; then
+    if [[ -z "${CUSTOM_ENV_KEEP_CONTAINER}" || ${JOB_FAILED} != 0 ]]; then
         echo -e "Cleaning up container ${CONTAINER_NAME}"
         enroot remove --force -- "${CONTAINER_NAME}"
     else

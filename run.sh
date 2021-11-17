@@ -105,8 +105,8 @@ done
     # Submission
     # shellcheck disable=SC2206
     COMMAND=(sbatch --parsable ${SLURM_CONFIG[*]} ${JOB_SCRIPT})
-    JOB_ID=$("${COMMAND[@]}" || \
-        die "Command: ${COMMAND[*]} failed with exit code ${EXIT_CODE}" "${WORK_DIR}")
+    JOB_ID=$("${COMMAND[@]}") || \
+        die "Command: ${COMMAND[*]} failed with exit code ${?}" "${WORK_DIR}"
     echo -e "Job submitted and pending with ID: ${JOB_ID}."
     squeue -u "${USER}"
 
@@ -129,9 +129,8 @@ done
     slurm_print_output "${JOB_ID}" "Log" "${JOB_LOG}" /dev/stdout
     slurm_print_output "${JOB_ID}" "Errors" "${JOB_ERR}" /dev/stdout
 
-    if [[ -f "${JOB_ERR}" && "$(cat "${JOB_ERR}")"  != "" ]]; then
+    test -f "${JOB_ERR}" && test "$(cat "${JOB_ERR}")"  != "" && \
         die "encountered an error during execution" "${WORK_DIR}" "${JOB_ID}"
-    fi
 
     # Cleanup the workdir
     rm -rf "${WORK_DIR}"
