@@ -25,13 +25,16 @@ export CONTAINER_NAME
 
 
 # Ccache and volume management
-export CCACHE_DIR_SRC="${CI_WS}/ccache"
 ENROOT_MOUNT_OPTIONS=()
-if [[ -n "${CUSTOM_ENV_CCACHE_DIR}" ]]; then
-    if [[ ! -d "${CCACHE_DIR_SRC}" ]]; then
-        mkdir -p "${CCACHE_DIR_SRC}"
-    fi
-    ENROOT_MOUNT_OPTIONS+=(--mount "${CCACHE_DIR_SRC}:${CUSTOM_ENV_CCACHE_DIR}" )
+if [[ -n "${CUSTOM_ENV_VOL_NUM}" ]]; then
+    for i in $(seq 1 "${CUSTOM_ENV_VOL_NUM}"); do
+        VOL_SRC="CUSTOM_ENV_VOL_${i}_SRC"
+        VOL_DST="CUSTOM_ENV_VOL_${i}_DST"
+        if [[ ! -d "${!VOL_SRC}" ]]; then
+            mkdir -p "${!VOL_SRC}"
+        fi
+        ENROOT_MOUNT_OPTIONS+=("--mount ${!VOL_SRC}:${!VOL_DST}")
+    done
 fi
 export ENROOT_MOUNT_OPTIONS
 

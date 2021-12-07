@@ -7,7 +7,7 @@ on:
 
 jobs:
   publish_readme_pdf:
-    if: ${{ github.ref == 'refs/heads/master' }}
+    if: ${{ github.ref != 'refs/heads/master' }}
     name: README as pdf
     runs-on: ubuntu-latest
     steps:
