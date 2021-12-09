@@ -22,9 +22,9 @@ In rootless mode, by relying on ENROOT and SLURM.
       1. [Global Options](#global-options)
       2. [SLURM Behavior](#slurm-behavior)
 2. [Installation](#installation)
-   1. [Enroot and Cluster Setup](#enroot-and-cluster-setup)
-   2. [Installing a gitlab-runner](#installing-a-gitlab-runner)
-   2. [Ccache setup](#ccache-setup)
+   1. [Installing a gitlab-runner](#installing-a-gitlab-runner)
+   2. [Enroot and Cluster Setup](#enroot-and-cluster-setup)
+   3. [Volume mounting and Ccache setup](#volume-mounting-and-ccache-setup)
 3. [Usage Example](#usage-example)
 4. [License](#license)
 5. [Links](#links)
@@ -92,9 +92,14 @@ Optional:
 
 + `USE_NAME`: instead of an automatically generated name, use a specific name for the container (and SLURM job if applicable). This name needs to be unique! When not specified, the name will be `GitLabRunnerEnrootExecutorBuildID${CUSTOM_ENV_CI_BUILD_ID}`.
 + `NVIDIA_VISIBLE_DEVICES`: a value passed to the enroot container to control NVIDIA device visibility. When no GPU is available or used, `void` should be passed.
-+ `CCACHE_DIR`: sets where the Ccache directory is mounted to in the enroot container when used.
 + `CCACHE_MAXSIZE`: sets a custom maximum limit to the Ccache directory size.
 + `KEEP_CONTAINER`: a non-zero value allows to not delete the container after usage, except if an error occurred.
+
+Volumes:
+
++ `VOL_NUM`: sets where the number of volumes configured to be mounted in the container.
++ `VOL_1_SRC`: sets the source directory (on the cluster) for the first volume.
++ `VOL_1_DST`: sets the destination directory (in the container) for the first volume.
 
 #### SLURM Behavior
 
@@ -128,8 +133,10 @@ The standard `gitlab-runner install` command can be used. Make sure to select th
   executor = "custom"
   builds_dir = "/workspace/scratch/my-ci-project/gitlab-runner/builds/"
   cache_dir = "/workspack/scratch/my-ci-project/gitlab-runner/cache/"
-  environment = ["CI_WS=/workspace/scratch/my-ci-project",
-                 "CCACHE_DIR=/ccache", "CCACHE_MAXSIZE=40G"]
+  environment = ["CI_WS=/workspace/scratch/my-ci-project", 
+                 "VOL_1_SRC=/workspace/scratch/my-ci-project/ccache", "VOL_1_DST=/ccache",
+                 "VOL_2_SRC=/workspace/scratch/my-ci-project/test_data", "VOL_2_DST=/test_data",
+                 "NUM_VOL=2", "CCACHE_MAXSIZE=40G"]
   [runners.custom_build_dir]
     enabled = false
   [runners.custom]
@@ -140,7 +147,7 @@ The standard `gitlab-runner install` command can be used. Make sure to select th
 ```
 
 ### Enroot and Cluster Setup
-On machines using `systemd` and `logind`, enable lingering for your user so that the gitlab-runner daemon can persist when logged off: `sysctl enable-linger ${USER}`. To check if the property is active, use the command: `loginctl show-user $USER --property=Linger`, which should output `Linger=yes`.
+On machines using `systemd` and `logind`, enable lingering for your user so that the gitlab-runner daemon can persist when logged off: `loginctl enable-linger ${USER}`. To check if the property is active, use the command: `loginctl show-user $USER --property=Linger`, which should output `Linger=yes`.
 
 As detailed in [global options](#global-options), it is required to set the environment variable `CI_WS` either in the runner configuration or in the script to be used as a workspace for storing enroot containers, caching, and more.
 
@@ -153,8 +160,14 @@ systemctl --user enable --now gitlab-runner
 systemctl --user status gitlab-runner
 ```
 
-### Ccache setup
-To enable Ccache, it is sufficient to set the variable `CCACHE_DIR` to the value of where Ccache will be stored inside the container (e.g., `/ccache`). The actual storage directory for Ccache on the cluster will be in `${CI_WS}/ccache`.
+### Volume mounting and Ccache setup
+A generic volume mounting interface is provided. This is useful for Ccache support but can be used for other aspects as well. It is configured through multiple environment variables:
+1. `VOL_NUM` specifies the number of volumes configured.
+2. `VOL_1_SRC` is the volume source (on the cluster), e.g. `${CI_WS}/ccache`
+3. `VOL_1_DST` is the volume destination (in the container), e.g. `/ccache`
+
+
+A full example is available in [Installing a gitlab-runner](#installing-a-gitlab-runner).
 
 ## Usage Example
 

@@ -15,6 +15,11 @@ before_last=$(($#-1))
 STEP_NAME_ARG="${!#}"
 STEP_SCRIPT_ARG="${!before_last}"
 
+if [[ "${STEP_NAME_ARG}" == "step_script" || "${STEP_NAME_ARG}" == "build_script"  ]]; then
+    echo -e "VOLUMES configuration:"
+    printf "\t%s\n" "${ENROOT_MOUNT_OPTIONS[@]}"
+    echo -e "\n"
+fi
 
 # No slurm requested, directly use the login node
 if [[ -z "${USE_SLURM}" || ${USE_SLURM} -eq 0 ]]; then
