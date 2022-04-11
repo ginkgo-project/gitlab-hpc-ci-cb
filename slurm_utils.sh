@@ -31,10 +31,10 @@ function die() {
     test -n "${msg}" && echo -e "${msg}" > /dev/stderr
     test -n "${jobid}" && scancel --quiet "${jobid}"
     test -n "${joblog}" && slurm_print_output "${jobid}" "Log" "${joblog}" /dev/stderr
-    test -n "${joberr}" && slurm_print_output "${jobid}" "Errors" "${joblog}" /dev/stderr
+    test -n "${joberr}" && slurm_print_output "${jobid}" "Errors" "${joberr}" /dev/stderr
     test -n "${workdir}" && test -d "${workdir}" && rm -rf "${workdir}"
     # Inform cleanup.sh that we encountered an error
-    touch "${CUSTOM_ENV_CI_WS}/${CUSTOM_ENV_CI_JOB_ID}"
+    # touch "${CUSTOM_ENV_CI_WS}/${CUSTOM_ENV_CI_JOB_ID}"
     exit "${BUILD_FAILURE_EXIT_CODE}"
 }
 

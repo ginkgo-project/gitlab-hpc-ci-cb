@@ -21,8 +21,14 @@ if [[ "${STEP_NAME_ARG}" == "step_script" || "${STEP_NAME_ARG}" == "build_script
     echo -e "\n"
 fi
 
-# No slurm requested, directly use the login node
-if [[ -z "${USE_SLURM}" || ${USE_SLURM} -eq 0 ]]; then
+# No slurm requested or required, directly use the login node
+if [[ -z "${USE_SLURM}" || ${USE_SLURM} -eq 0 ||
+          # All scripts from after_script onward are executed on the login node
+          # see https://docs.gitlab.com/runner/executors/custom.html#run
+          "${STEP_NAME_ARG}" == "after_script" ||
+          "${STEP_NAME_ARG}" == "cleanup_file_variables" ||
+          "${STEP_NAME_ARG}" == *"archive"* ||
+          "${STEP_NAME_ARG}" == *"upload_artifacts"* ]]; then
     # Enroot fails when quoting anything or splitting this command. Leave it in
     # this format.
     #
@@ -57,18 +63,18 @@ else # SLURM usage requested
     # Save the step script
     cp "${STEP_SCRIPT_ARG}" "${STEP_SCRIPT}"
 
-    # Only store the gitlab scripts until we reach the last cleanup one
-    if [[ "${STEP_NAME_ARG}" != "cleanup_file_variables" ]]; then
+    # Only store the gitlab scripts until we reach the main {build,step}_script
+    if [[ ! "${STEP_NAME_ARG}" =~ ^[bs].*"_script" ]]; then
         echo -e "Storing the script for step ${STEP_NAME_ARG} for bulk submission."
         exit
     fi
 
-    # This is the last step cleanup_file_variables, prepare the SLURM job
+    # We finally reached the main script, prepare the SLURM job
     JOB_LOG=$(mktemp -p "${WORK_DIR}")
     JOB_ERR=$(mktemp -p "${WORK_DIR}")
     SLURM_CONFIG=("--job-name=${CONTAINER_NAME}")
-    SLURM_CONFIG+=("--error=${JOB_ERR}")
     SLURM_CONFIG+=("--output=${JOB_LOG}")
+    SLURM_CONFIG+=("--error=${JOB_ERR}")
     SLURM_CONFIG+=("--chdir=${WORK_DIR}")
     if [[ -n "${CUSTOM_ENV_SLURM_PARTITION}" ]]; then
         SLURM_CONFIG+=("--partition=${CUSTOM_ENV_SLURM_PARTITION}")
@@ -100,7 +106,7 @@ else # SLURM usage requested
     echo -e "#!/bin/bash
 
 for scriptnum in \$(ls -1v ${STEP_SCRIPT_DIR}); do
-    srun enroot start ${MOUNT_OPTIONS[*]} --rw ${ENROOT_ENV_CONFIG[*]} \
+    srun enroot start ${ENROOT_MOUNT_OPTIONS[*]} --rw ${ENROOT_ENV_CONFIG[*]} \
         ${CONTAINER_NAME} /bin/bash < ${STEP_SCRIPT_DIR}/\${scriptnum}
 done
 " > "${JOB_SCRIPT}"
@@ -130,12 +136,12 @@ done
         "${SLURM_GOOD_COMPLETED_STATUS}" || die "encountered an error while waiting" \
         "${WORK_DIR}" "${JOB_ID}" "${JOB_LOG}" "${JOB_ERR}"
 
+    test -f "${JOB_ERR}" && test "$(cat "${JOB_ERR}")"  != "" && \
+        die "encountered an error during execution" "${WORK_DIR}" "${JOB_ID}" "${JOB_LOG}" "${JOB_ERR}"
+
     echo -e "Job ${JOB_ID} completed."
     slurm_print_output "${JOB_ID}" "Log" "${JOB_LOG}" /dev/stdout
     slurm_print_output "${JOB_ID}" "Errors" "${JOB_ERR}" /dev/stdout
-
-    test -f "${JOB_ERR}" && test "$(cat "${JOB_ERR}")"  != "" && \
-        die "encountered an error during execution" "${WORK_DIR}" "${JOB_ID}"
 
     # Cleanup the workdir
     rm -rf "${WORK_DIR}"

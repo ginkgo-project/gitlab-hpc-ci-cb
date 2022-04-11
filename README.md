@@ -97,7 +97,7 @@ Optional:
 
 Volumes:
 
-+ `VOL_NUM`: sets where the number of volumes configured to be mounted in the container.
++ `VOL_NUM`: sets the number of volumes configured to be mounted in the container.
 + `VOL_1_SRC`: sets the source directory (on the cluster) for the first volume.
 + `VOL_1_DST`: sets the destination directory (in the container) for the first volume.
 
@@ -210,6 +210,11 @@ slurm_test_job:
   tags:
     - my_enroot_runner
 ```
+
+#### `after_script`
+The `after_script` step is never executed inside a SLURM job, but always
+directly executed instead. It is assumed that this script is only used for
+cleanup or similar purpose.
 
 ## License
 Licensed under the [BSD 3-Clause license].
