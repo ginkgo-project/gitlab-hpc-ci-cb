@@ -38,6 +38,10 @@ if [[ -n "${CUSTOM_ENV_VOL_NUM}" ]]; then
 fi
 export ENROOT_MOUNT_OPTIONS
 
+if [[ -n "${CUSTOM_ENV_ENROOT_REMAP_ROOT}" ]]; then
+    ENROOT_REMAP_ROOT="--root"
+    export ENROOT_REMAP_ROOT
+fi
 
 # Propagate these environment variables to the container
 PROPAGATED_ENV_VARIABLES=(BENCHMARK

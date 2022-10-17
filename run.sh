@@ -33,7 +33,7 @@ if [[ -z "${USE_SLURM}" || ${USE_SLURM} -eq 0 ||
     # this format.
     #
     # shellcheck disable=SC2206
-    COMMAND=(enroot start ${ENROOT_MOUNT_OPTIONS[*]} --rw ${ENROOT_ENV_CONFIG[*]} -e "NVIDIA_VISIBLE_DEVICES=void" ${CONTAINER_NAME} /bin/bash)
+    COMMAND=(enroot start ${ENROOT_REMAP_ROOT} ${ENROOT_MOUNT_OPTIONS[*]} --rw ${ENROOT_ENV_CONFIG[*]} -e "NVIDIA_VISIBLE_DEVICES=void" ${CONTAINER_NAME} /bin/bash)
     "${COMMAND[@]}" < "${STEP_SCRIPT_ARG}" || die "Command: ${COMMAND[*]} failed with exit code ${?}"
 else # SLURM usage requested
     ensure_executable_available sacct
@@ -106,7 +106,7 @@ else # SLURM usage requested
     echo -e "#!/bin/bash
 
 for scriptnum in \$(ls -1v ${STEP_SCRIPT_DIR}); do
-    srun enroot start ${ENROOT_MOUNT_OPTIONS[*]} --rw ${ENROOT_ENV_CONFIG[*]} \
+    srun enroot start ${ENROOT_REMAP_ROOT} ${ENROOT_MOUNT_OPTIONS[*]} --rw ${ENROOT_ENV_CONFIG[*]} \
         ${CONTAINER_NAME} /bin/bash < ${STEP_SCRIPT_DIR}/\${scriptnum}
 done
 " > "${JOB_SCRIPT}"
