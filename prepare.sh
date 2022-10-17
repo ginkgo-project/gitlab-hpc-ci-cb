@@ -37,7 +37,11 @@ if ! [[ $(enroot list | grep "${CONTAINER_NAME}") ]]; then
     # Import a container image from a specific location to enroot image dir
     # Scheme: docker://[USER@][REGISTRY#]IMAGE[:TAG]
     IMAGE_DIR="${ENROOT_DATA_PATH}"
-    URL="docker://${CUSTOM_ENV_CI_JOB_IMAGE}"
+    if [[ ${CUSTOM_ENV_CI_JOB_IMAGE} == "${CI_REGISTRY}"* ]]; then
+        URL="docker://${CUSTOM_ENV_CI_REGISTRY_USER}:${CUSTOM_ENV_CI_REGISTRY_PASSWORD}@${CUSTOM_ENV_CI_REGISTRY}#${CUSTOM_ENV_CI_JOB_IMAGE#*$CUSTOM_ENV_CI_REGISTRY/}"
+    else
+        URL="docker://${CUSTOM_ENV_CI_JOB_IMAGE}"
+    fi
     IMAGE_NAME="${CUSTOM_ENV_CI_JOB_IMAGE//[:@#.\/]/-}"
     # Utility timestamp and lock files
     IMAGE_TIMESTAMP_FILE=${IMAGE_DIR}/TIMESTAMP_${IMAGE_NAME}
