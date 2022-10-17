@@ -94,6 +94,7 @@ Optional:
 + `NVIDIA_VISIBLE_DEVICES`: a value passed to the enroot container to control NVIDIA device visibility. When no GPU is available or used, `void` should be passed.
 + `CCACHE_MAXSIZE`: sets a custom maximum limit to the Ccache directory size.
 + `KEEP_CONTAINER`: a non-zero value allows to not delete the container after usage, except if an error occurred.
++ `ENROOT_REMAP_ROOT`: a non-zero value allows adds the enroot option --root
 
 Volumes:
 
