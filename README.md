@@ -85,7 +85,7 @@ The following variables control some aspects of the script functionality. They c
 
 These variables are not SLURM specific and can be used in the default `ENROOT` only mode.
 
-+ `CI_JOB_IMAGE` (YAML script `image:` option): a standard docker image for enroot to instantiate a container from; If it hosted on gitlab (`CI_REGISTRY`), it will will be accessed via default token `CI_REGISTRY_PASSWORD`
++ `CI_JOB_IMAGE` (YAML script `image:` option): a standard docker image for enroot to instantiate a container from; If it is hosted on gitlab (`CI_REGISTRY` is set), it will be accessed via the default token `CI_REGISTRY_PASSWORD`.
 + `CI_WS`: a directory with shared data access across all nodes to be used as a workspace.
 
 Optional:
