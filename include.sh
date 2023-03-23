@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # Include the slurm utility functions
 # shellcheck source=./slurm_utils.sh
