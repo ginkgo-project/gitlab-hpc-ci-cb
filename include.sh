@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 # Include the slurm utility functions
 # shellcheck source=./slurm_utils.sh
@@ -72,6 +72,7 @@ PROPAGATED_ENV_VARIABLES=(BENCHMARK
                           CCACHE_DIR
                           CCACHE_MAXSIZE
                          )
+# shellcheck disable=SC2048
 for bench_var in ${PROPAGATED_ENV_VARIABLES[*]}; do
     check_var="CUSTOM_ENV_${bench_var}"
     if [[ -n "${!check_var}" ]]; then
@@ -95,6 +96,7 @@ if [[ -z "${USE_SLURM}" || ${USE_SLURM} -ne 0 ]]; then
                                SLURM_PENDING_LIMIT
                                SLURM_RUNNING_LIMIT
                                USE_SLURM)
+    # shellcheck disable=SC2048
     for slurm_var in ${SUPPORTED_SLURM_VARIABLES[*]}; do
         check_var="CUSTOM_ENV_${slurm_var}"
         if [[ -n "${!check_var}" ]]; then

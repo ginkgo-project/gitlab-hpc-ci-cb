@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 # https://docs.gitlab.com/runner/executors/custom.html#run
 
 
@@ -103,7 +103,7 @@ else # SLURM usage requested
 
     # Launch the container through slurm
     # Somehow, this script doesn't like if the variables are surrounded by "
-    echo -e "#!/bin/bash
+    echo -e "#!/usr/bin/env bash
 
 for scriptnum in \$(ls -1v ${STEP_SCRIPT_DIR}); do
     srun enroot start ${ENROOT_REMAP_ROOT} ${ENROOT_MOUNT_OPTIONS[*]} --rw ${ENROOT_ENV_CONFIG[*]} \

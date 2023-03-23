@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 # https://docs.gitlab.com/runner/executors/custom.html#config
 
 # shellcheck source=./include.sh
