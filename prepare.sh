@@ -38,6 +38,7 @@ if ! [[ $(enroot list | grep "${CONTAINER_NAME}") ]]; then
     # Scheme: docker://[USER@][REGISTRY#]IMAGE[:TAG]
     IMAGE_DIR="${ENROOT_DATA_PATH}"
     if [[ ${CUSTOM_ENV_CI_JOB_IMAGE} == "${CUSTOM_ENV_CI_REGISTRY}"* ]]; then
+        # shellcheck disable=SC2295
         URL="docker://${CUSTOM_ENV_CI_REGISTRY_USER}:${CUSTOM_ENV_CI_REGISTRY_PASSWORD}@${CUSTOM_ENV_CI_REGISTRY}#${CUSTOM_ENV_CI_JOB_IMAGE#*$CUSTOM_ENV_CI_REGISTRY/}"
     else
         URL="docker://${CUSTOM_ENV_CI_JOB_IMAGE}"
