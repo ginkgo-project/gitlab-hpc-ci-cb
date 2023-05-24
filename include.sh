@@ -17,7 +17,7 @@ export SLURM_IDS_PATH="${CI_WS}/SLURM_IDS"
 # Set a variable CONTAINER_NAME based on the environment variable
 # CUSTOM_ENV_USE_NAME
 if [[ -z "${CUSTOM_ENV_USE_NAME}" ]]; then
-    CONTAINER_NAME="GitLabRunnerEnrootExecutorBuildID${CUSTOM_ENV_CI_BUILD_ID}"
+    CONTAINER_NAME="GitLabRunnerEnrootExecutorID${CUSTOM_ENV_CI_JOB_ID}"
 else
     CONTAINER_NAME="${CUSTOM_ENV_USE_NAME}"
 fi
