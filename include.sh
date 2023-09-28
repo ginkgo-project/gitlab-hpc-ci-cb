@@ -30,7 +30,7 @@ if [[ -n "${CUSTOM_ENV_VOL_NUM}" ]]; then
     for i in $(seq 1 "${CUSTOM_ENV_VOL_NUM}"); do
         VOL_SRC="CUSTOM_ENV_VOL_${i}_SRC"
         VOL_DST="CUSTOM_ENV_VOL_${i}_DST"
-        if [[ ! -d "${!VOL_SRC}" ]]; then
+        if [[ ! -e "${!VOL_SRC}" ]]; then
             mkdir -p "${!VOL_SRC}"
         fi
         ENROOT_MOUNT_OPTIONS+=("--mount ${!VOL_SRC}:${!VOL_DST}")
